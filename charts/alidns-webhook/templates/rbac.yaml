@@ -8,12 +8,11 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 ---
-# Grant permissions to read secrets inside the cert-manager namespace to get credentials
+# Grant permissions to read secrets inside the cluster to allow to have issuer in another namespace than the webhook
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: {{ include "alidns-webhook.fullname" . }}:secrets-reader
-  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ include "alidns-webhook.name" . }}
     chart: {{ include "alidns-webhook.chart" . }}
@@ -27,12 +26,11 @@ rules:
     verbs:
       - 'get'
 ---
-# Bind the previously created role to the webhook service account to allow reading from secrets in a cert-manager namespace
+# Bind the previously created role to the webhook service account to allow reading from secrets in all namespaces
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: {{ include "alidns-webhook.fullname" . }}:secrets-reader
-  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ include "alidns-webhook.name" . }}
     chart: {{ include "alidns-webhook.chart" . }}
@@ -40,7 +38,7 @@ metadata:
     heritage: {{ .Release.Service }}    
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: {{ include "alidns-webhook.fullname" . }}:secrets-reader
 subjects:
   - apiGroup: ""
@@ -51,7 +49,7 @@ subjects:
 # Grant the webhook permission to read the ConfigMap containing the Kubernetes
 # apiserver's requestheader-ca-certificate.
 # This ConfigMap is automatically created by the Kubernetes apiserver.
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "alidns-webhook.fullname" . }}:webhook-authentication-reader
@@ -73,7 +71,7 @@ subjects:
 ---
 # apiserver gets the auth-delegator role to delegate auth decisions to
 # the core apiserver
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ include "alidns-webhook.fullname" . }}:auth-delegator
@@ -93,7 +91,7 @@ subjects:
     namespace: {{ .Release.Namespace }}
 ---
 # Grant cert-manager permission to validate using our apiserver
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "alidns-webhook.fullname" . }}:domain-solver
@@ -110,7 +108,7 @@ rules:
     verbs:
       - 'create'
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ include "alidns-webhook.fullname" . }}:domain-solver

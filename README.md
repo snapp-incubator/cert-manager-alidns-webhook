@@ -23,22 +23,51 @@ kubectl create secret generic alidns-secrets --from-literal="access-token=yourto
 
 The name of solver to use is `alidns-solver`. You can create an issuer as below :
 ```
-apiVersion: v1
-items:
-- apiVersion: cert-manager.io/v1alpha2
-  kind: Issuer
-  metadata:
-    name: letsencrypt
-    namespace: default
-  spec:
-    acme:
-      email: contact@example.com
-      privateKeySecretRef:
-        name: letsencrypt
-      server: https://acme-v02-staging.api.letsencrypt.org/directory
-      solvers:
-      - dns01:
-          webhook:
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt
+  namespace: default
+spec:
+  acme:
+    email: contact@example.com
+    privateKeySecretRef:
+      name: letsencrypt
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    solvers:
+    - dns01:
+        webhook:
+          config:
+            accessTokenSecretRef:
+              key: access-token
+              name: alidns-secrets
+            regionId: cn-beijing
+            secretKeySecretRef:
+              key: secret-key
+              name: alidns-secrets
+          groupName: example.com
+          solverName: alidns-solver
+      selector:
+        dnsNames:
+        - example.com
+        - '*.example.com'
+```
+
+Or you can create an ClusterIssuer as below :
+```
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    email: contact@example.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt
+    solvers:
+    - dns01:
+        webhook:
             config:
               accessTokenSecretRef:
                 key: access-token
@@ -49,16 +78,50 @@ items:
                 name: alidns-secrets
             groupName: example.com
             solverName: alidns-solver
-        selector:
-          dnsNames:
-          - '*.example.com'
-
 ```
+
 See cert-manager documentation for more information : https://cert-manager.io/docs/configuration/acme/dns01/
 
 ### Create the certification
 
 Then create the certificate which will use this issuer : https://cert-manager.io/docs/usage/certificate/
+
+
+Create an certification using Issuer as below :
+```
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-tls
+spec:
+  secretName: example-com-tls
+  commonName: example.com
+  dnsNames:
+  - example.com
+  - "*.example.com"
+  issuerRef:
+    name: letsencrypt
+    kind: Issuer
+```
+
+Or create an certification using ClusterIssuer as below :
+```
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-tls
+spec:
+  secretName: example-com-tls
+  commonName: example.com
+  dnsNames:
+  - example.com
+  - "*.example.com"
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+```
+
+
 
 ## Tests
 
